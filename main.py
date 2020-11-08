@@ -93,16 +93,19 @@ def get_links_by_id(update, next_links):
     for link in links:
         text = ''
         try:
-            try:
-                text += link[0].tail
-            except IndexError:
+            if link.tail:
                 text += link.tail
+            else:
+                try:
+                    text += link[0].tail
+                except IndexError:
+                    pass
         except TypeError:
             pass
         try:
-            text = get_el_text(link[0]) + text
+            text = f'{get_el_text(link[0])}{text}'
         except IndexError:
-            text = get_el_text(link) + text
+            text = f'{get_el_text(link)}{text}'
             lines = link.getparent().getparent().getnext()
             for line in lines:
                 try:
@@ -119,7 +122,6 @@ def get_links_by_id(update, next_links):
 
 
 def get_links_by_class(update, next_links):
-    # self.message += next_links[0].getparent().text + '\n'
     keyboard = []
     for link in next_links:
         keyboard.append([InlineKeyboardButton(
