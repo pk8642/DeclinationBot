@@ -4,8 +4,12 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import requests
 import lxml.html
 from tabulate import tabulate
+import os
 
-TOKEN = open('/home/pk864/tokens/test_bot').read().strip()
+try:
+    TOKEN = os.environ['TOKEN_D']
+except KeyError:
+    TOKEN = open('/home/pk864/tokens/test_bot').read().strip()
 updater = Updater(token=TOKEN, use_context=True)
 
 
