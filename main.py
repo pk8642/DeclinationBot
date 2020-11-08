@@ -138,11 +138,10 @@ def get_links_by_class(update, next_links):
 
 def try_form_table(update, context, word, cb=None):
     target = 'https://prirucka.ujc.cas.cz'
-    word = word.lower()
     if cb:
         params = word[2:]
     else:
-        params = f'slovo={word.replace(" ", "+")}'
+        params = f'slovo={word.lower()}'
     request = requests.get(target, params=params)
     page = lxml.html.document_fromstring(request.text.split('<hr')[0])
     next_links = []
@@ -180,11 +179,15 @@ def handle_message(update, context):
     message = update.effective_message.text
     if message == '/start':
         send_hello(update, context)
-    elif update.effective_message.text != '/start' and update.effective_message.text.startswith(
-            '/'):
+    elif update.effective_message.text != '/start' and \
+            update.effective_message.text.startswith('/'):
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text='You can start this bot by comand /start')
+    elif len(message.split()) > 1:
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text='Please, type 1 word')
     else:
         try_form_table(update, context, message)
 
