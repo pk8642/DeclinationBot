@@ -136,6 +136,7 @@ def get_links_by_class(update, next_links):
 
 def try_form_table(update, context, word, cb=None):
     target = 'https://prirucka.ujc.cas.cz'
+    word = word.lower()
     if cb:
         params = word[2:]
     else:
@@ -169,9 +170,7 @@ def try_form_table(update, context, word, cb=None):
 
 
 def callback_query_handler(bot, update):
-    # print(dir(bot.effective_message))
     bot.effective_message.delete()
-    # chat_id = bot.efective_chat_id
     try_form_table(bot, update, bot.callback_query.data, True)
 
 
