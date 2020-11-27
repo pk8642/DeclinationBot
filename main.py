@@ -45,9 +45,23 @@ def assembly_message(table, start, end, keys=()):
             b.append(e)
             b[j] = b[j].replace('. pád', '')
             b[j] = b[j].replace('. osoba', '')
+            b[j] = b[j].replace('rozkazovací způsob', 'imperativ')
+            b[j] = b[j].replace('příčestí činné', 'minulý č.')
+            b[j] = b[j].replace('příčestí trpné', 'participium')
+            b[j] = b[j].replace('přechodník přítomný', 'př.přít.')
+            b[j] = b[j].replace('verbální substantivum', 'verb. subs.')
+            b[j] = b[j].replace('přechodník minulý', 'př.min.')
+            if start != 1 and j == 0:
+                b[j] += ':'
+            elif j != 0:
+                b[j] = b[j].replace(', ', '\n')
         a.append(b)
-
-    return tabulate(a, headers=keys) + '\n'
+    if not keys:
+        keys = "firstrow"
+    result = tabulate(a, headers=keys)
+    if start == 1:
+        return result + '\n\n'
+    return result + '\n'
 
 
 def find_gender(page):
@@ -71,7 +85,9 @@ def form_message(page):
             return message + assembly_message(table, 1, len(table), keys)
         elif 'osoba' in table[1][0].text:
             message = assembly_message(table, 1, 4, keys)  # verb
-            return message + assembly_message(table, 5, 6)
+            for i in range(4, len(table) - 1):
+                message += assembly_message(table, i, i + 1)
+            return message
     except IndexError:
         pass
 
@@ -139,7 +155,7 @@ def get_links_by_class(update, next_links):
 def try_form_table(update, context, word, cb=None):
     target = 'https://prirucka.ujc.cas.cz'
     if cb:
-        params = word[2:]
+        params = word.split('&')[0][(len(target)) + 2:]
     else:
         params = f'slovo={word.lower()}'
     request = requests.get(target, params=params)
