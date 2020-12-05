@@ -5,6 +5,7 @@ import requests
 import lxml.html
 from tabulate import tabulate
 import os
+import logging
 
 try:
     TOKEN = os.environ['TOKEN_D']
@@ -13,11 +14,32 @@ except KeyError:
 updater = Updater(token=TOKEN, use_context=True)
 
 
+def log_exceptions(f):
+    def send_exception_message(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            update, context = args[0], args[1]
+            p = update.effective_chat
+            if update.callback_query:
+                upd = update.callback_query
+                text = upd.data
+            else:
+                upd = update.message
+                text = upd.text
+            upd.bot.send_message(
+                chat_id=-1001304092645,
+                text=f'{p.username}({p.first_name} {p.last_name}): '
+                     f'"{text}"\nError: {e}'
+            )
+
+    return send_exception_message
+
+
 def send_hello(update, context):
     welcome = 'Hello, type here some czech word, except adjectives and' \
               ' adverbs. Also type just 1 word, without particles'
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=welcome)
+    update.message.reply_text(text=welcome)
 
 
 def get_el_text(e):
@@ -92,6 +114,7 @@ def form_message(page):
         pass
 
 
+@log_exceptions
 def send_message(update, context, message):
     if message:
         context.bot.send_message(
@@ -103,6 +126,7 @@ def send_message(update, context, message):
             text='Didn\'t find anything about this :-(')
 
 
+@log_exceptions
 def get_links_by_id(update, next_links):
     keyboard = []
     links = next_links.xpath('//table/tr/td//a')
@@ -137,6 +161,7 @@ def get_links_by_id(update, next_links):
         reply_markup=reply_markup)
 
 
+@log_exceptions
 def get_links_by_class(update, next_links):
     keyboard = []
     for link in next_links:
@@ -152,6 +177,7 @@ def get_links_by_class(update, next_links):
         pass
 
 
+@log_exceptions
 def try_form_table(update, context, word, cb=None):
     target = 'https://prirucka.ujc.cas.cz'
     if cb:
@@ -186,11 +212,13 @@ def try_form_table(update, context, word, cb=None):
             send_message(update, context, message)
 
 
+@log_exceptions
 def callback_query_handler(bot, update):
     bot.effective_message.delete()
     try_form_table(bot, update, bot.callback_query.data, True)
 
 
+@log_exceptions
 def handle_message(update, context):
     message = update.effective_message.text
     if message == '/start':
@@ -208,9 +236,16 @@ def handle_message(update, context):
         try_form_table(update, context, message)
 
 
-message_handler = MessageHandler(Filters.text, handle_message)
-updater.dispatcher.add_handler(message_handler)
-command_handler = MessageHandler(Filters.command, handle_message)
-updater.dispatcher.add_handler(command_handler)
-updater.dispatcher.add_handler(CallbackQueryHandler(callback_query_handler))
-updater.start_polling()
+def main():
+    message_handler = MessageHandler(Filters.text, handle_message)
+    updater.dispatcher.add_handler(message_handler)
+    command_handler = MessageHandler(Filters.command, handle_message)
+    updater.dispatcher.add_handler(command_handler)
+    updater.dispatcher.add_handler(
+        CallbackQueryHandler(callback_query_handler))
+    updater.start_polling()
+    updater.idle()
+
+
+if __name__ == '__main__':
+    main()
