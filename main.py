@@ -173,7 +173,7 @@ def get_links_by_class(update, next_links):
         update.message.reply_text(
             next_links[0].getparent().text + '\n',
             reply_markup=reply_markup)
-    except AttributeError:
+    except (AttributeError, IndexError):
         pass
 
 
