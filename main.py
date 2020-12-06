@@ -13,6 +13,8 @@ except KeyError:
     TOKEN = open('/home/pk864/tokens/test_bot').read().strip()
 updater = Updater(token=TOKEN, use_context=True)
 
+CHANNEL_ID = -1001304092645
+
 
 def log_exceptions(f):
     def send_exception_message(*args, **kwargs):
@@ -28,9 +30,10 @@ def log_exceptions(f):
                 upd = update.message
                 text = upd.text
             upd.bot.send_message(
-                chat_id=-1001304092645,
+                chat_id=CHANNEL_ID,
                 text=f'{p.username}({p.first_name} {p.last_name}): '
-                     f'"{text}"\nError: {e}'
+                     f'"{text}"\nError: {e}\n'
+                     f'In function: {f.__name__}'
             )
 
     return send_exception_message
@@ -126,7 +129,6 @@ def send_message(update, context, message):
             text='Didn\'t find anything about this :-(')
 
 
-@log_exceptions
 def get_links_by_id(update, next_links):
     keyboard = []
     links = next_links.xpath('//table/tr/td//a')
@@ -154,10 +156,10 @@ def get_links_by_id(update, next_links):
                     text += ' ' + line[0].text
         keyboard.append([InlineKeyboardButton(
             text,
-            callback_data=link.get('href'))])
+            callback_data=link.get('href').split('?')[1].split('&')[0])])
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(
-        next_links.getparent().text + '\n',
+        text=next_links.getparent().text + '\n',
         reply_markup=reply_markup)
 
 
@@ -167,49 +169,45 @@ def get_links_by_class(update, next_links):
     for link in next_links:
         keyboard.append([InlineKeyboardButton(
             f"{link.xpath('a')[0].text}{link[0].tail}",
-            callback_data=link.xpath('a')[0].get('href'))])
+            callback_data=
+            link.xpath('a')[0].get('href').split('?')[1].split('&')[0])])
     reply_markup = InlineKeyboardMarkup(keyboard)
-    try:
-        update.message.reply_text(
-            next_links[0].getparent().text + '\n',
-            reply_markup=reply_markup)
-    except (AttributeError, IndexError):
-        pass
+    update.message.reply_text(
+        text=next_links[0].getparent().text + '\n',
+        reply_markup=reply_markup)
 
 
 @log_exceptions
 def try_form_table(update, context, word, cb=None):
     target = 'https://prirucka.ujc.cas.cz'
     if cb:
-        params = word.split('&')[0][(len(target)) + 2:]
+        params = word
     else:
         params = f'slovo={word.lower()}'
     request = requests.get(target, params=params)
     page = lxml.html.document_fromstring(request.text.split('<hr')[0])
-    next_links = []
-    try:
-        next_links = page.find_class('odsazeno')
-        get_links_by_class(update, next_links)
-    except (KeyError, IndexError):
+
+    next_links = page.find_class('odsazeno')
+    if len(next_links) != 0:
+        return get_links_by_class(update, next_links)
+    else:
         try:
             next_links = page.get_element_by_id('dalsiz')
-            get_links_by_id(update, next_links)
+            return get_links_by_id(update, next_links)
         except KeyError:
             pass
-    finally:
-        if len(next_links) == 0:
-            message = ''
-            try:
-                message += page.find_class('ks')[0].getchildren()[
-                               0].text + '\n'
-            except IndexError:
-                send_message(update, context, '')
-                return
-            try:
-                message += form_message(page)
-            except TypeError:
-                pass
-            send_message(update, context, message)
+    message = ''
+    try:
+        message += page.find_class('ks')[0].getchildren()[
+                       0].text + '\n'
+    except IndexError:
+        send_message(update, context, '')
+        return
+    try:
+        message += form_message(page)
+    except TypeError:
+        pass
+    send_message(update, context, message)
 
 
 @log_exceptions
@@ -220,6 +218,9 @@ def callback_query_handler(bot, update):
 
 @log_exceptions
 def handle_message(update, context):
+    if update.effective_chat.id == CHANNEL_ID:
+        return
+
     message = update.effective_message.text
     if message == '/start':
         send_hello(update, context)
