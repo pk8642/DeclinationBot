@@ -39,6 +39,7 @@ def log_exceptions(f):
 
     return send_exception_message
 
+
 @run_async
 def send_hello(update, context):
     welcome = 'Hello, type here some czech word, except adjectives and' \
@@ -120,18 +121,15 @@ def form_message(page):
 
 @run_async
 @log_exceptions
-def send_message(update, context, message, url):
+def send_message(update, context, message):
     if message:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=f'`{message}`', parse_mode='MarkdownV2')
     else:
-        context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f'Didn\'t find anything about this :-(\n'
-                 f'Bot may have some problems, you can try to find your word '
-                 f'here:\n{url}\n\n'
-                 f'Also, tell, please, @pk864 about this issue')
+        update.message.reply_text(
+            text=f'Didn\'t find anything about this :-('
+        )
 
 
 @run_async
@@ -193,8 +191,27 @@ def try_form_table(update, context, word, cb=None):
     else:
         params = f'slovo={word.lower()}'
     request = requests.get(target, params=params)
+    try:
+        page = lxml.html.document_fromstring(request.text)
+        link = page.xpath('/html/body/div/div[4]/div[2]/small[2]/small/a')
+        params = link[0].get('onclick')
+        requests.get(target + '/files/js.html', params=params)
+        update.message.bot.send_message(
+            chat_id=CHANNEL_ID,
+            text='sent rebooting request'
+        )
+        return try_form_table(update, context, word, cb)
+    except IndexError:
+        if 'Please, wait to its completion, ' \
+           'the server is overloaded.' in request.text:
+            url = f'{target}/?{params}'
+            update.message.reply_text(
+                text=f'Server on the website is overloaded from this bot IP. '
+                     f'You can wait some amount of time or try it by yourself '
+                     f'from your IP address:\n\n{url}\n\n'
+                     f'Also, tell please @pk864 about this issue!!!')
+            return
     page = lxml.html.document_fromstring(request.text.split('<hr')[0])
-
     next_links = page.find_class('odsazeno')
     if len(next_links) != 0:
         return get_links_by_class(update, next_links)
@@ -209,13 +226,13 @@ def try_form_table(update, context, word, cb=None):
         message += page.find_class('ks')[0].getchildren()[
                        0].text + '\n'
     except IndexError:
-        send_message(update, context, '', f'{target}/?{params}')
+        send_message(update, context, '')
         return
     try:
         message += form_message(page)
     except TypeError:
         pass
-    send_message(update, context, message, '')
+    send_message(update, context, message)
 
 
 @run_async
