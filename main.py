@@ -1,5 +1,6 @@
 from telegram.ext import Updater, CallbackQueryHandler
 from telegram.ext import MessageHandler, Filters
+from telegram.ext.dispatcher import run_async
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import requests
 import lxml.html
@@ -38,7 +39,7 @@ def log_exceptions(f):
 
     return send_exception_message
 
-
+@run_async
 def send_hello(update, context):
     welcome = 'Hello, type here some czech word, except adjectives and' \
               ' adverbs. Also type just 1 word, without particles'
@@ -117,6 +118,7 @@ def form_message(page):
         pass
 
 
+@run_async
 @log_exceptions
 def send_message(update, context, message, url):
     if message:
@@ -132,6 +134,7 @@ def send_message(update, context, message, url):
                  f'Also, tell, please, @pk864 about this issue')
 
 
+@run_async
 def get_links_by_id(update, next_links):
     keyboard = []
     links = next_links.xpath('//table/tr/td//a')
@@ -166,6 +169,7 @@ def get_links_by_id(update, next_links):
         reply_markup=reply_markup)
 
 
+@run_async
 @log_exceptions
 def get_links_by_class(update, next_links):
     keyboard = []
@@ -180,6 +184,7 @@ def get_links_by_class(update, next_links):
         reply_markup=reply_markup)
 
 
+@run_async
 @log_exceptions
 def try_form_table(update, context, word, cb=None):
     target = 'https://prirucka.ujc.cas.cz'
@@ -213,12 +218,14 @@ def try_form_table(update, context, word, cb=None):
     send_message(update, context, message, '')
 
 
+@run_async
 @log_exceptions
 def callback_query_handler(bot, update):
     bot.effective_message.delete()
     try_form_table(bot, update, bot.callback_query.data, True)
 
 
+@run_async
 @log_exceptions
 def handle_message(update, context):
     if update.effective_chat.id == CHANNEL_ID:
