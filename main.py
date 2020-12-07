@@ -118,7 +118,7 @@ def form_message(page):
 
 
 @log_exceptions
-def send_message(update, context, message):
+def send_message(update, context, message, url):
     if message:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -126,7 +126,10 @@ def send_message(update, context, message):
     else:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text='Didn\'t find anything about this :-(')
+            text=f'Didn\'t find anything about this :-(\n'
+                 f'Bot may have some problems, you can try to find your word '
+                 f'here:\n{url}\n\n'
+                 f'Also, tell, please, @pk864 about this issue')
 
 
 def get_links_by_id(update, next_links):
@@ -201,13 +204,13 @@ def try_form_table(update, context, word, cb=None):
         message += page.find_class('ks')[0].getchildren()[
                        0].text + '\n'
     except IndexError:
-        send_message(update, context, '')
+        send_message(update, context, '', f'{target}/?{params}')
         return
     try:
         message += form_message(page)
     except TypeError:
         pass
-    send_message(update, context, message)
+    send_message(update, context, message, '')
 
 
 @log_exceptions
