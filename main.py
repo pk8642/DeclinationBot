@@ -78,13 +78,14 @@ def assembly_message(table, start, end, keys=()):
             b[j] = b[j].replace('přechodník přítomný', 'př.přít.')
             b[j] = b[j].replace('verbální substantivum', 'verb. subs.')
             b[j] = b[j].replace('přechodník minulý', 'př.min.')
-            if start != 1 and j == 0:
+            if start > 1 and j == 0:
                 b[j] += ':'
             elif j != 0:
                 b[j] = b[j].replace(', ', '\n')
         a.append(b)
-    if not keys:
-        keys = "firstrow"
+    if keys and a[0] == keys:
+        a[0] = [' ', 'sing', 'plur']
+    keys = "firstrow"
     result = tabulate(a, headers=keys)
     if start == 1:
         return result + '\n\n'
@@ -103,15 +104,15 @@ def find_gender(page):
 
 def form_message(page):
     table = page.xpath('//tr')
-    keys = [' ', 'sing', 'plur']
+    keys = [' ', 'jednotné číslo', 'množné číslo']
     try:
         if 'pád' in table[1][0].text:  # noun nebo zaimeno
 
             gender = find_gender(page)
             message = gender + '\n\n'
-            return message + assembly_message(table, 1, len(table), keys)
+            return message + assembly_message(table, 0, len(table), keys)
         elif 'osoba' in table[1][0].text:
-            message = assembly_message(table, 1, 4, keys)  # verb
+            message = assembly_message(table, 0, 4, keys)  # verb
             for i in range(4, len(table) - 1):
                 message += assembly_message(table, i, i + 1)
             return message
@@ -195,7 +196,8 @@ def try_form_table(update, context, word, cb=None):
         page = lxml.html.document_fromstring(request.text)
         link = page.xpath('/html/body/div/div[4]/div[2]/small[2]/small/a')
         params = link[0].get('onclick')
-        requests.get(target + '/files/js.html', params=params)
+        requests.get(target + '/files/prirucka.js',
+                     headers={'referer': 'https://prirucka.ujc.cas.cz/?id=on_1'})
         update.message.bot.send_message(
             chat_id=CHANNEL_ID,
             text='sent rebooting request'
