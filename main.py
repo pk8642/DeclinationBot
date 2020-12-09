@@ -185,7 +185,7 @@ def get_links_by_class(update, next_links):
 
 @run_async
 @log_exceptions
-def try_form_table(update, context, word, cb=None):
+def try_form_table(update, context, word, cb=None, recursed=False):
     target = 'https://prirucka.ujc.cas.cz'
     if cb:
         params = word
@@ -193,6 +193,8 @@ def try_form_table(update, context, word, cb=None):
         params = f'slovo={word.lower()}'
     request = requests.get(target, params=params)
     try:
+        if recursed:
+            raise IndexError()
         page = lxml.html.document_fromstring(request.text)
         link = page.xpath('/html/body/div/div[4]/div[2]/small[2]/small/a')
         params = link[0].get('onclick')
@@ -202,7 +204,7 @@ def try_form_table(update, context, word, cb=None):
             chat_id=CHANNEL_ID,
             text='sent rebooting request'
         )
-        return try_form_table(update, context, word, cb)
+        return try_form_table(update, context, word, recursed=True)
     except IndexError:
         if 'Please, wait to its completion, ' \
            'the server is overloaded.' in request.text:
